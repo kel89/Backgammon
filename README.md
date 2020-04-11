@@ -9,3 +9,4 @@ This project attempts to build a nerural net that can play backgammon. This will
 Before we can being generating data and training the network we need to be able to play the game. To do this we must first come up with a definition for the *game state*, clearly define the rules, come up with a way to find possible moves, and a way to track and update the game state. 
 
 ### Game State
+![board](
