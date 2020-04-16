@@ -6,6 +6,8 @@ Contrains the functions required to play a game
 
 import numpy as np
 import random
+from tqdm import tqdm
+from RandomPlayer import *
 
 def init_state():
 	"""
@@ -117,9 +119,20 @@ def flip_board(board):
 	and values flipped to it always looks like player
 	one is playing
 	"""
-	idx = np.concatenate([np.arange(23, -1, -1), [24, 25, 26, 27]])
+	# Copy the board
 	copy = np.copy(board)
+
+	# Swap playing spots
+	idx = np.concatenate([np.arange(23, -1, -1), [24, 25, 26, 27]])
 	copy = copy[idx]
+
+	# Swap bar and end
+	idx = np.concatenate([np.arange(0, 24, 1), [25, 24, 27, 26]])
+	copy = copy[idx]
+
+	# Change signs
+	copy = np.negative(copy)
+
 	return copy
 
 
@@ -127,27 +140,33 @@ def flip_moves(moves):
 	"""
 	Flips the moves that are otherwise from the perspective
 	of player 1 to player 2
-	Handles the case when outside the normal playing spaces
-	by not making any change to those.
-	Handles the case of moving to end game with if
+	Swaps the bar and end spaces
 	"""
+	# print("Moves to flip", moves)
 	new_moves = []
 	for m in moves:
-		if (m[0] > 23):
-			p1 = m[0]
-		else:
-			p1 = 23 - m[0]
+		move = []
+		for p in m:
+			# If normal game play space
+			if (p <= 23):
+				p1 = 23 - p
+			# Special space, so swap it
+			else:
+				if (p == 24):
+					p1 = 25
+				elif (p == 25):
+					p1 = 24
+				elif (p == 26):
+					p1 = 27
+				else:
+					p1 = 27
 
-		if (m[1] == 27):
-			p2 = 27
-		else:
-			p2 = 23 - m[1]
+			move.append(p1)
 
-		new_moves.append([p1, p2])
+		new_moves.append(move)
 	return new_moves
 
 
-# This function only works for player 1
 def get_possible_moves(board, val, player):
 	"""
 	Returns an array of tuples that are the possible moves
@@ -157,92 +176,52 @@ def get_possible_moves(board, val, player):
 	# Copy the board
 	bc = np.copy(board)
 
-	# Mark Player one constants
-	if (player == "player 1"):
-		last_quad_start = 18
-		bar = 24
-		end_holder = 26
-	else:
-		# Flip board
+	# Set the board constants
+	last_quad_start = 18
+	bar = 24
+	end_holder = 26
+
+	if (player == "player 2"):
 		bc = flip_board(bc)
-
-		# Adjust the targets
-		last_quad_start = 18
-		bar = 25
-		end_holder = 27
-
 
 	# Initialize move tracker
 	possible_moves = []
 
-	if player == "player 1":
-		# Check if at the bar
-		if (bc[bar] > 0):
-			if board[val-1] >= -1:
-				possible_moves.append([bar, val-1])
+	# Check if at the bar
+	if (bc[bar] > 0):
+		if bc[val-1] >= -1:
+			possible_moves.append([bar, val-1])
 
-		# None at the bar
-		else:
-			# get our inds
-			our_inds = np.where(bc[0:24] > 0)[0] # as we don't want to consider end game state
-			if (len(our_inds) == 0):
-				return possible_moves
-
-			# Check if last quadrant
-			if (np.min(our_inds) >= last_quad_start):
-				last_quad = True
-			else:
-				last_quad = False
-
-			# Check possible chips to move
-			for ind in our_inds:
-				if (ind + val < 24): # note, other player moves in other direciton
-					# legal, non chip removal move
-					if (bc[ind + val] >= -1):
-						possible_moves.append([ind, ind+val])
-				else:
-					if (last_quad):
-						# then we can remove this piece
-						possible_moves.append([ind, end_holder])
-
-	# Player 2
+	# None at the bar
 	else:
-		# Check if at the bar
-		if (bc[bar] < 0):
-			if bc[val-1] <= 1:
-				possible_moves.append([bar, val-1])
+		# get our inds
+		our_inds = np.where(bc[0:24] > 0)[0] # as we don't want to consider end game state
+		if (len(our_inds) == 0):
+			return possible_moves
 
-		# None at the bar
+		# Check if last quadrant
+		if (np.min(our_inds) >= last_quad_start):
+			last_quad = True
 		else:
-			# get our inds
-			our_inds = np.where(bc[0:24] < 0)[0] # as we don't want to consider end game state
+			last_quad = False
 
-			# if no inds, game over after first move
-			if (len(our_inds) == 0):
-				return possible_moves
-
-			# Check if last quadrant
-			if (np.min(our_inds) >= last_quad_start):
-				last_quad = True
+		# Check possible chips to move
+		for ind in our_inds:
+			if (ind + val < 24): # note, other player moves in other direciton
+				# legal, non chip removal move
+				if (bc[ind + val] >= -1):
+					possible_moves.append([ind, ind+val])
 			else:
-				last_quad = False
+				if (last_quad):
+					# then we can remove this piece
+					possible_moves.append([ind, end_holder])
 
-			# Check possible chips to move
-			for ind in our_inds:
-				if (ind + val < 24): # note, other player moves in other direciton
-					# legal, non chip removal move
-					if (bc[ind + val] <= 1):
-						possible_moves.append([ind, ind+val])
-				else:
-					if (last_quad):
-						# then we can remove this piece
-						possible_moves.append([ind, end_holder])
-
-		# Flip the moves so they are back in player 2's perspective?
-		# print("Pre flip moves:", possible_moves)
+	# Check if we need to flip the moves
+	if (player == "player 2"):
 		possible_moves = flip_moves(possible_moves)
 
 	return possible_moves
+
 
 
 def get_all_moves(board, vals, player):
@@ -346,8 +325,10 @@ def play_game(p1, p2):
 		not_same = True if (len(vals) != 2) else False
 
 	if (vals[0] > vals[1]):
+		starting_player = p1
 		player = p1
 	else:
+		starting_player = p2
 		player = p2
 
 	# Game loop
@@ -379,6 +360,31 @@ def play_game(p1, p2):
 
 	# Now that the game is over determine the winner
 	winner = p1 if (board[26] == 15) else p2
-	obj = {'winner': winner, 'turns': i}
+	obj = {'winner': winner, 'turns': i, 'boards':board_tracker,
+		'starting_player':starting_player}
 
 	return obj
+
+if __name__ == "__main__":
+	p1 = RandomPlayer("player 1")
+	p2 = RandomPlayer("player 2")
+
+	N = 500
+	turn_tracker = np.zeros(N)
+	winner_tracker = [0,0]
+
+	for i in tqdm(range(N), leave=False):
+		obj = play_game(p1, p2)
+		turn_tracker[i] = obj['turns']
+		if (obj['winner'] == p1):
+			winner_tracker[0] += 1
+		else:
+			winner_tracker[1] += 1
+
+	import matplotlib.pyplot as plt
+
+	print("Player 1", winner_tracker[0])
+	print("Player 2", winner_tracker[1])
+
+	plt.hist(turn_tracker, bins=40)
+	plt.show()

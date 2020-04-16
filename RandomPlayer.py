@@ -7,7 +7,8 @@ Class for a random player
 import numpy as np
 import random
 
-from backgammon import *
+# from backgammon import *
+import backgammon
 
 class RandomPlayer(object):
 	def __init__(self, which):
@@ -26,7 +27,7 @@ class RandomPlayer(object):
 		dice rolled, and returns the desired move
 		"""
 		# get all the moves
-		all_moves = get_all_moves(board, vals, self.which)
+		all_moves = backgammon.get_all_moves(board, vals, self.which)
 
 		# Randomly pick one
 		if (len(all_moves) == 0):

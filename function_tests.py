@@ -110,6 +110,7 @@ board[23] = 0
 board[12] = 0
 # board[5] = 0
 board[7] = 0
+# pretty_print(board)
 moves = get_possible_moves(board, 6, "player 2")
 # print(moves)
 assert(check_moves(moves, [[5, 27]]))
