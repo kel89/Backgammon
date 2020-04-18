@@ -66,6 +66,9 @@ class PlayerANN():
 		# Train the model
 		mf = self.model.fit(boards, outcomes, verbose=verbose)
 
+		# Crush the graph, maybe that is what is messing with RAM?
+		tf.keras.backend.clear_session()
+
 	def save_model(self, file_name):
 		"""
 		Saves the model weights tensorflow style
